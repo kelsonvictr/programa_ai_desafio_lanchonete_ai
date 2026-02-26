@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desafio 2 — Sistema de Pedidos da Lanchonete AI Burgers</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Nunito:wght@400;600;700;800;900&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0c0f0a;
+  --surface:#171c14;
+  --surface2:#1e2419;
+  --accent:#ff9f1c;
+  --accent2:#e63946;
+  --accent3:#2ec4b6;
+  --accent4:#a8dadc;
+  --accent5:#f4a261;
+  --text:#fffffe;
+  --text-dim:#9ca89e;
+  --code-bg:#141a10;
+  --burger:#ff9f1c;
+  --fries:#f4a261;
+  --salad:#2ec4b6;
+  --drink:#a8dadc;
+}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  font-family:'Nunito',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.7;
+  overflow-x:hidden;
+}
+
+/* Animated background - chalkboard texture vibe */
+.bg-grid{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:0;
+  background-image:
+    radial-gradient(circle at 20% 50%,rgba(255,159,28,0.03) 0%,transparent 50%),
+    radial-gradient(circle at 80% 20%,rgba(230,57,70,0.03) 0%,transparent 50%),
+    radial-gradient(circle at 50% 80%,rgba(46,196,182,0.03) 0%,transparent 50%);
+}
+.bg-pattern{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:0;opacity:0.03;
+  background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L55 30 L30 55 L5 30Z' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E");
+  background-size:60px 60px;
+}
+.bg-orbs{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:0;overflow:hidden;
+}
+.bg-orbs .orb{
+  position:absolute;border-radius:50%;filter:blur(100px);opacity:0.08;
+  animation:orbFloat 25s ease-in-out infinite;
+}
+.bg-orbs .orb:nth-child(1){width:600px;height:600px;background:var(--accent);top:-200px;left:-200px;animation-delay:0s}
+.bg-orbs .orb:nth-child(2){width:500px;height:500px;background:var(--accent2);bottom:-200px;right:-200px;animation-delay:-8s}
+.bg-orbs .orb:nth-child(3){width:400px;height:400px;background:var(--accent3);top:40%;left:60%;animation-delay:-16s}
+@keyframes orbFloat{
+  0%,100%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(40px,-40px) scale(1.1)}
+  66%{transform:translate(-40px,30px) scale(0.9)}
+}
+
+.container{
+  max-width:900px;margin:0 auto;padding:20px;
+  position:relative;z-index:1;
+}
+
+/* Progress bar */
+.progress-track{
+  position:fixed;top:0;left:0;width:100%;height:4px;z-index:100;
+  background:rgba(255,255,255,0.05);
+}
+.progress-bar{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,var(--accent2),var(--accent),var(--accent3));
+  transition:width 0.3s;border-radius:0 2px 2px 0;
+  box-shadow:0 0 20px rgba(255,159,28,0.5);
+}
+
+/* Nav dots */
+.nav-dots{
+  position:fixed;right:24px;top:50%;transform:translateY(-50%);
+  z-index:50;display:flex;flex-direction:column;gap:12px;
+}
+.nav-dot{
+  width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--text-dim);background:transparent;
+  cursor:pointer;transition:all 0.3s;position:relative;
+}
+.nav-dot.active{
+  border-color:var(--accent);background:var(--accent);
+  box-shadow:0 0 12px rgba(255,159,28,0.6);
+}
+.nav-dot:hover::after{
+  content:attr(data-label);
+  position:absolute;right:24px;top:50%;transform:translateY(-50%);
+  background:var(--surface2);color:var(--text);
+  padding:4px 12px;border-radius:6px;
+  font-size:0.75rem;white-space:nowrap;
+  font-family:'Nunito',sans-serif;
+}
+
+/* Hero */
+.hero{
+  text-align:center;padding:80px 20px 60px;
+}
+.hero-badge{
+  display:inline-block;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));
+  color:var(--bg);
+  font-weight:800;font-size:0.85rem;
+  padding:6px 20px;border-radius:50px;
+  text-transform:uppercase;letter-spacing:2px;
+  margin-bottom:24px;
+  animation:fadeSlideDown 0.8s ease both;
+}
+.hero-emoji{
+  font-size:4.5rem;display:block;margin-bottom:16px;
+  animation:burgerBounce 3s ease-in-out infinite;
+  filter:drop-shadow(0 8px 20px rgba(255,159,28,0.3));
+}
+@keyframes burgerBounce{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  25%{transform:translateY(-15px) rotate(-3deg)}
+  50%{transform:translateY(-5px) rotate(0deg)}
+  75%{transform:translateY(-15px) rotate(3deg)}
+}
+.hero h1{
+  font-size:clamp(2.5rem,6vw,4rem);
+  font-weight:900;
+  background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent5));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  line-height:1.15;margin-bottom:8px;
+  animation:fadeSlideDown 0.8s ease 0.15s both;
+}
+.hero .brand{
+  font-size:clamp(1.2rem,3vw,1.6rem);
+  color:var(--accent);font-weight:800;
+  margin-bottom:16px;
+  animation:fadeSlideDown 0.8s ease 0.2s both;
+}
+.hero .subtitle{
+  font-size:1.15rem;color:var(--text-dim);max-width:600px;margin:0 auto;
+  animation:fadeSlideDown 0.8s ease 0.3s both;
+}
+@keyframes fadeSlideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:scale(0.5)}to{opacity:1;transform:scale(1)}}
+
+/* Sections */
+.step-section{
+  margin:40px 0;
+  opacity:0;transform:translateY(40px);
+  transition:opacity 0.7s ease,transform 0.7s ease;
+}
+.step-section.visible{opacity:1;transform:translateY(0)}
+
+.step-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.step-number{
+  width:56px;height:56px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:1.5rem;color:var(--bg);
+  flex-shrink:0;position:relative;
+}
+.step-number::after{
+  content:'';position:absolute;inset:-3px;border-radius:19px;
+  background:inherit;opacity:0.25;z-index:-1;
+}
+.step-number.s1{background:var(--accent2)}
+.step-number.s2{background:var(--accent)}
+.step-number.s3{background:var(--accent3)}
+.step-number.s4{background:var(--accent5)}
+.step-number.s5{background:var(--accent4);color:var(--bg)}
+.step-number.s6{background:var(--accent2)}
+.step-title{font-size:1.6rem;font-weight:800}
+
+.section-connector{display:flex;justify-content:center;margin:10px 0 20px}
+.section-connector .line{width:2px;height:50px;background:linear-gradient(to bottom,rgba(255,255,255,0.08),transparent)}
+
+/* Cards */
+.card{
+  background:var(--surface);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:20px;padding:32px;
+  margin-bottom:24px;
+  position:relative;overflow:hidden;
+  transition:border-color 0.3s;
+}
+.card:hover{border-color:rgba(255,255,255,0.12)}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  opacity:0;transition:opacity 0.3s;
+}
+.card:hover::before{opacity:1}
+
+/* Concept */
+.concept{
+  background:var(--surface2);border-radius:16px;
+  padding:24px;margin:16px 0;
+  border-left:4px solid var(--accent);
+}
+.concept-title{
+  font-family:'Caveat',cursive;font-size:1.4rem;
+  color:var(--accent);margin-bottom:8px;
+}
+.concept p{color:var(--text-dim);font-size:0.95rem}
+
+/* Code blocks */
+.code-block{
+  background:var(--code-bg);border-radius:14px;
+  margin:16px 0;overflow:hidden;
+  border:1px solid rgba(255,255,255,0.06);
+  position:relative;
+}
+.code-header{
+  background:rgba(255,255,255,0.04);
+  padding:10px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.code-header .dots{display:flex;gap:6px}
+.code-header .dot{width:10px;height:10px;border-radius:50%}
+.code-header .dot:nth-child(1){background:#ff5f57}
+.code-header .dot:nth-child(2){background:#febc2e}
+.code-header .dot:nth-child(3){background:#28c840}
+.code-header .filename{color:var(--text-dim);font-size:0.8rem;font-family:'JetBrains Mono',monospace}
+pre{
+  padding:20px;margin:0;overflow-x:auto;
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.85rem;line-height:1.8;
+  color:#e0def4;
+}
+.code-block .line-numbers{
+  position:absolute;left:0;top:44px;
+  padding:20px 12px 20px 16px;
+  color:rgba(255,255,255,0.15);
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.85rem;line-height:1.8;
+  text-align:right;user-select:none;
+  border-right:1px solid rgba(255,255,255,0.04);
+}
+.code-block.with-lines pre{padding-left:56px}
+
+/* Syntax */
+.kw{color:#c4a7e7}
+.fn{color:#9ccfd8}
+.st{color:#f6c177}
+.cm{color:#6e6a86;font-style:italic}
+.nb{color:#eb6f92}
+.op{color:#e0def4}
+.num{color:#ea9a97}
+.var{color:#e0def4}
+.bool{color:#3e8fb0}
+.ret{color:#eb6f92}
+
+/* Analogy */
+.analogy{
+  background:linear-gradient(135deg,rgba(255,159,28,0.06),rgba(230,57,70,0.06));
+  border:1px solid rgba(255,159,28,0.2);
+  border-radius:16px;padding:24px;margin:16px 0;
+  position:relative;
+}
+.analogy::before{content:'💡';font-size:1.6rem;position:absolute;top:-14px;left:20px}
+.analogy-title{font-family:'Caveat',cursive;font-size:1.3rem;color:var(--accent5);margin-bottom:8px}
+
+/* Tip */
+.tip{
+  background:rgba(46,196,182,0.06);
+  border:1px solid rgba(46,196,182,0.2);
+  border-radius:14px;padding:20px 24px;margin:16px 0;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.tip-icon{font-size:1.4rem;flex-shrink:0;margin-top:2px}
+.tip-content{color:var(--text-dim);font-size:0.92rem}
+.tip-content strong{color:var(--accent3)}
+
+/* Warning */
+.warning{
+  background:rgba(230,57,70,0.06);
+  border:1px solid rgba(230,57,70,0.2);
+  border-radius:14px;padding:20px 24px;margin:16px 0;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.warning-icon{font-size:1.4rem;flex-shrink:0;margin-top:2px}
+
+/* New vs Desafio 1 */
+.new-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(230,57,70,0.12);
+  border:1px solid rgba(230,57,70,0.3);
+  padding:3px 12px;border-radius:50px;
+  font-size:0.75rem;color:var(--accent2);font-weight:800;
+  text-transform:uppercase;letter-spacing:1px;
+}
+
+/* Flowchart */
+.flow-container{
+  display:flex;flex-direction:column;align-items:center;
+  gap:0;margin:24px 0;
+}
+.flow-box{
+  background:var(--surface2);border:2px solid rgba(255,255,255,0.08);
+  border-radius:14px;padding:16px 28px;
+  text-align:center;font-weight:700;font-size:0.95rem;
+  position:relative;min-width:240px;
+  transition:all 0.3s;cursor:default;
+}
+.flow-box:hover{transform:scale(1.03);border-color:rgba(255,255,255,0.2)}
+.flow-box.start{border-color:var(--accent3);background:rgba(46,196,182,0.08)}
+.flow-box.process{border-color:var(--accent);background:rgba(255,159,28,0.08)}
+.flow-box.decision{border-color:var(--accent2);background:rgba(230,57,70,0.08)}
+.flow-box.end{border-color:var(--accent5);background:rgba(244,162,97,0.08)}
+.flow-box.action{border-color:var(--accent4);background:rgba(168,218,220,0.08)}
+.flow-box .label{font-size:0.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+
+.flow-arrow{
+  width:2px;height:36px;position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.flow-arrow::before{content:'';position:absolute;width:2px;height:100%;background:linear-gradient(to bottom,var(--text-dim),transparent)}
+.flow-arrow::after{content:'▼';position:absolute;bottom:-8px;color:var(--text-dim);font-size:0.7rem}
+.flow-arrow .flow-label{
+  position:absolute;left:24px;top:50%;transform:translateY(-50%);
+  font-size:0.95rem;color:var(--accent);font-weight:700;
+  white-space:nowrap;font-family:'Caveat',cursive;
+}
+.flow-arrow .flow-label.right{left:auto;right:24px}
+
+/* Menu card — the visual menu */
+.menu-visual{
+  background:linear-gradient(145deg,#1a1208,#1f1a0e);
+  border:2px solid rgba(255,159,28,0.2);
+  border-radius:20px;padding:28px;margin:20px 0;
+  position:relative;overflow:hidden;
+}
+.menu-visual::before{
+  content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+  background:url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1' fill='rgba(255,159,28,0.05)'/%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.menu-visual-title{
+  text-align:center;font-size:1.6rem;font-weight:900;
+  color:var(--accent);margin-bottom:20px;
+  text-shadow:0 0 30px rgba(255,159,28,0.3);
+}
+.menu-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-radius:12px;margin:6px 0;
+  transition:all 0.3s;cursor:default;
+  border:1px solid transparent;
+}
+.menu-item:hover{
+  background:rgba(255,255,255,0.03);
+  border-color:rgba(255,255,255,0.08);
+  transform:translateX(4px);
+}
+.menu-item .item-left{display:flex;align-items:center;gap:12px}
+.menu-item .item-num{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:0.85rem;color:var(--bg);
+  flex-shrink:0;
+}
+.menu-item .item-num.n1{background:var(--burger)}
+.menu-item .item-num.n2{background:var(--salad)}
+.menu-item .item-num.n3{background:var(--fries)}
+.menu-item .item-num.n4{background:var(--drink)}
+.menu-item .item-name{font-weight:700;font-size:1rem}
+.menu-item .item-dots{flex:1;margin:0 12px;border-bottom:2px dotted rgba(255,255,255,0.1)}
+.menu-item .item-price{
+  font-family:'JetBrains Mono',monospace;font-weight:700;
+  color:var(--accent);font-size:1rem;
+}
+
+/* Interactive order builder */
+.order-builder{margin:20px 0}
+.order-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.order-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  border:2px solid;padding:10px 18px;border-radius:12px;
+  font-size:0.9rem;font-weight:700;cursor:pointer;
+  font-family:'Nunito',sans-serif;
+  transition:all 0.3s;background:transparent;color:var(--text);
+}
+.order-btn:hover{transform:translateY(-2px)}
+.order-btn:active{transform:translateY(0)}
+.order-btn.b1{border-color:var(--burger)}
+.order-btn.b1:hover{background:rgba(255,159,28,0.12);box-shadow:0 4px 20px rgba(255,159,28,0.2)}
+.order-btn.b2{border-color:var(--salad)}
+.order-btn.b2:hover{background:rgba(46,196,182,0.12);box-shadow:0 4px 20px rgba(46,196,182,0.2)}
+.order-btn.b3{border-color:var(--fries)}
+.order-btn.b3:hover{background:rgba(244,162,97,0.12);box-shadow:0 4px 20px rgba(244,162,97,0.2)}
+.order-btn.b4{border-color:var(--drink)}
+.order-btn.b4:hover{background:rgba(168,218,220,0.12);box-shadow:0 4px 20px rgba(168,218,220,0.2)}
+.order-btn.reset{border-color:rgba(255,255,255,0.15);font-size:0.85rem;padding:10px 14px}
+.order-btn.reset:hover{background:rgba(255,255,255,0.05)}
+
+/* Order list viz */
+.order-list{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  margin:12px 0;min-height:50px;
+  padding:16px;background:var(--surface2);border-radius:14px;
+}
+.order-list .bracket{font-family:'JetBrains Mono',monospace;font-size:1.6rem;color:var(--text-dim);font-weight:700}
+.order-list .item{
+  border-radius:10px;padding:6px 14px;
+  font-family:'JetBrains Mono',monospace;font-weight:700;
+  font-size:0.85rem;
+  animation:popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275) both;
+  display:flex;align-items:center;gap:6px;
+}
+.order-list .item.i1{background:rgba(255,159,28,0.15);border:1px solid rgba(255,159,28,0.3);color:var(--burger)}
+.order-list .item.i2{background:rgba(46,196,182,0.15);border:1px solid rgba(46,196,182,0.3);color:var(--salad)}
+.order-list .item.i3{background:rgba(244,162,97,0.15);border:1px solid rgba(244,162,97,0.3);color:var(--fries)}
+.order-list .item.i4{background:rgba(168,218,220,0.15);border:1px solid rgba(168,218,220,0.3);color:var(--drink)}
+.order-list .comma{color:var(--text-dim);font-family:'JetBrains Mono',monospace}
+
+/* Receipt */
+.receipt{
+  background:linear-gradient(180deg,#fefcf3,#f5f0e1);
+  border-radius:16px;padding:24px 28px;margin:20px 0;
+  color:#1a1a1a;font-family:'JetBrains Mono',monospace;
+  position:relative;max-width:340px;
+  box-shadow:0 8px 30px rgba(0,0,0,0.3);
+  transition:all 0.5s;
+}
+.receipt::before{
+  content:'';position:absolute;top:-8px;left:8px;right:8px;height:16px;
+  background:repeating-linear-gradient(90deg,transparent,transparent 4px,#fefcf3 4px,#fefcf3 8px);
+}
+.receipt-header{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px dashed #ccc}
+.receipt-header h4{font-size:1.1rem;font-weight:800;color:#333}
+.receipt-header p{font-size:0.75rem;color:#888}
+.receipt-line{
+  display:flex;justify-content:space-between;
+  padding:4px 0;font-size:0.85rem;color:#444;
+}
+.receipt-divider{border-top:1px dashed #ccc;margin:12px 0}
+.receipt-total{
+  display:flex;justify-content:space-between;
+  font-weight:800;font-size:1.1rem;color:#1a1a1a;
+  padding-top:4px;
+}
+.receipt-footer{text-align:center;margin-top:16px;padding-top:12px;border-top:2px dashed #ccc;font-size:0.7rem;color:#aaa}
+.receipt.empty{opacity:0.4;filter:grayscale(1)}
+
+/* For loop visualization */
+.for-viz{margin:20px 0}
+.for-viz-row{
+  display:flex;align-items:center;gap:12px;
+  padding:8px 12px;border-radius:10px;margin:4px 0;
+  transition:all 0.4s;font-family:'JetBrains Mono',monospace;
+  font-size:0.85rem;
+}
+.for-viz-row.active{background:rgba(255,159,28,0.1);border-left:3px solid var(--accent)}
+.for-viz-row .iter-badge{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:0.8rem;color:var(--bg);
+  flex-shrink:0;
+}
+.for-viz-row .arrow-icon{color:var(--accent);font-weight:800}
+.for-viz-row .calc{color:var(--text-dim)}
+.for-viz-row .result{color:var(--accent3);font-weight:700}
+
+/* Keyword chips */
+.keyword-map{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;margin:16px 0;
+}
+.keyword-chip{
+  background:var(--surface2);border-radius:12px;
+  padding:14px;text-align:center;
+  border:1px solid rgba(255,255,255,0.06);
+  transition:all 0.3s;cursor:default;
+}
+.keyword-chip:hover{border-color:rgba(255,255,255,0.15);transform:translateY(-3px)}
+.keyword-chip .emoji{font-size:1.5rem;display:block;margin-bottom:6px}
+.keyword-chip .kw-name{font-weight:800;font-size:0.85rem;color:var(--accent)}
+.keyword-chip .kw-desc{font-size:0.75rem;color:var(--text-dim);margin-top:4px}
+
+/* Comparison with Desafio 1 */
+.comparison{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;
+}
+.comparison-col{
+  background:var(--surface2);border-radius:14px;padding:20px;
+  border:1px solid rgba(255,255,255,0.06);
+}
+.comparison-col h4{font-size:0.9rem;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.comparison-col .old{color:var(--text-dim)}
+.comparison-col .new{color:var(--accent)}
+.comparison-col ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.comparison-col li{font-size:0.85rem;color:var(--text-dim);padding-left:16px;position:relative}
+.comparison-col li::before{content:'→';position:absolute;left:0;color:var(--accent)}
+
+/* Toggler */
+.toggler{background:var(--surface);border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid rgba(255,255,255,0.06)}
+.toggler-header{
+  padding:16px 24px;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  transition:background 0.3s;font-weight:700;
+}
+.toggler-header:hover{background:rgba(255,255,255,0.03)}
+.toggler-arrow{transition:transform 0.3s;font-size:1.2rem}
+.toggler-header.open .toggler-arrow{transform:rotate(180deg)}
+.toggler-body{max-height:0;overflow:hidden;transition:max-height 0.5s ease;padding:0 24px}
+.toggler-body.open{max-height:2000px;padding:0 24px 24px}
+
+/* Demo terminal */
+.demo-terminal{
+  background:#0a0d08;border-radius:16px;overflow:hidden;
+  border:1px solid rgba(255,255,255,0.08);margin:20px 0;
+}
+.demo-terminal .term-header{
+  background:rgba(255,255,255,0.04);padding:12px 16px;
+  display:flex;align-items:center;gap:8px;
+}
+.demo-terminal .term-header .dots{display:flex;gap:6px}
+.demo-terminal .term-header .dot{width:10px;height:10px;border-radius:50%}
+.demo-terminal .term-header .dot:nth-child(1){background:#ff5f57}
+.demo-terminal .term-header .dot:nth-child(2){background:#febc2e}
+.demo-terminal .term-header .dot:nth-child(3){background:#28c840}
+.demo-terminal .term-header span{color:var(--text-dim);font-size:0.8rem;font-family:'JetBrains Mono',monospace;margin-left:8px}
+.demo-body{
+  padding:20px;font-family:'JetBrains Mono',monospace;
+  font-size:0.85rem;min-height:300px;max-height:400px;overflow-y:auto;
+  color:#c4b5fd;line-height:1.9;
+}
+.demo-line{opacity:0;transform:translateX(-10px);transition:all 0.4s ease}
+.demo-line.show{opacity:1;transform:translateX(0)}
+.demo-line .prompt{color:var(--accent3)}
+.demo-line .user-input{color:var(--accent)}
+.demo-line .output{color:#e0def4}
+.demo-line .success{color:var(--accent3)}
+.demo-line .result{color:var(--accent);font-weight:700}
+
+.btn-demo{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;border:none;padding:12px 28px;
+  border-radius:12px;font-size:0.95rem;font-weight:700;
+  cursor:pointer;font-family:'Nunito',sans-serif;
+  transition:all 0.3s;margin:12px 0;
+}
+.btn-demo:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(255,159,28,0.3)}
+.btn-demo:active{transform:translateY(0)}
+
+/* Pulse badge */
+.pulse-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,159,28,0.1);
+  border:1px solid rgba(255,159,28,0.3);
+  padding:4px 14px;border-radius:50px;
+  font-size:0.8rem;color:var(--accent);font-weight:700;
+}
+.pulse-badge .dot{
+  width:6px;height:6px;border-radius:50%;background:var(--accent);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.5)}}
+
+/* Complete code */
+.complete-code{position:relative}
+.complete-code .copy-btn{
+  position:absolute;top:52px;right:12px;
+  background:rgba(255,255,255,0.08);border:none;
+  color:var(--text-dim);padding:6px 14px;border-radius:8px;
+  font-size:0.8rem;cursor:pointer;font-family:'JetBrains Mono',monospace;
+  transition:all 0.3s;z-index:2;
+}
+.complete-code .copy-btn:hover{background:rgba(255,255,255,0.15);color:var(--text)}
+
+/* Stagger */
+.stagger > *{opacity:0;transform:translateY(20px);transition:all 0.5s ease}
+.stagger.visible > *:nth-child(1){transition-delay:0.05s}
+.stagger.visible > *:nth-child(2){transition-delay:0.1s}
+.stagger.visible > *:nth-child(3){transition-delay:0.15s}
+.stagger.visible > *:nth-child(4){transition-delay:0.2s}
+.stagger.visible > *:nth-child(5){transition-delay:0.25s}
+.stagger.visible > *:nth-child(6){transition-delay:0.3s}
+.stagger.visible > *{opacity:1;transform:translateY(0)}
+
+/* Final */
+.final-section{text-align:center;padding:60px 20px}
+.final-section h2{
+  font-size:2rem;font-weight:900;margin-bottom:16px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.trophy{font-size:3rem;animation:trophyBounce 1s ease-in-out infinite;display:inline-block}
+@keyframes trophyBounce{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  25%{transform:translateY(-8px) rotate(-5deg)}
+  75%{transform:translateY(-8px) rotate(5deg)}
+}
+
+footer{
+  text-align:center;padding:40px 20px;
+  color:var(--text-dim);font-size:0.85rem;
+  border-top:1px solid rgba(255,255,255,0.05);
+  margin-top:40px;
+}
+footer a{color:var(--accent);text-decoration:none}
+
+@media(max-width:768px){
+  .container{padding:16px}
+  .card{padding:20px}
+  .nav-dots{display:none}
+  .hero{padding:50px 16px 40px}
+  .comparison{grid-template-columns:1fr}
+  pre{font-size:0.78rem}
+  .flow-box{min-width:200px;padding:12px 18px;font-size:0.85rem}
+  .order-btn{padding:8px 14px;font-size:0.82rem}
+  .receipt{max-width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-pattern"></div>
+<div class="bg-orbs">
+  <div class="orb"></div><div class="orb"></div><div class="orb"></div>
+</div>
+
+<div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+
+<nav class="nav-dots" id="navDots">
+  <div class="nav-dot active" data-label="Início" onclick="scrollToSection(0)"></div>
+  <div class="nav-dot" data-label="Entendendo" onclick="scrollToSection(1)"></div>
+  <div class="nav-dot" data-label="Menu" onclick="scrollToSection(2)"></div>
+  <div class="nav-dot" data-label="Preços" onclick="scrollToSection(3)"></div>
+  <div class="nav-dot" data-label="Loop" onclick="scrollToSection(4)"></div>
+  <div class="nav-dot" data-label="Total" onclick="scrollToSection(5)"></div>
+  <div class="nav-dot" data-label="Completo" onclick="scrollToSection(6)"></div>
+  <div class="nav-dot" data-label="Demo" onclick="scrollToSection(7)"></div>
+</nav>
+
+<div class="container">
+
+  <!-- HERO -->
+  <section class="hero" id="sec-0">
+    <span class="hero-emoji">🍔</span>
+    <div class="hero-badge">Desafio Prático #2</div>
+    <h1>Sistema de Pedidos</h1>
+    <div class="brand">Lanchonete AI Burgers</div>
+    <p class="subtitle">Consolide loops, condicionais, listas e funções criando um sistema de pedidos interativo — com cálculo de preço total!</p>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 1: Understanding -->
+  <section class="step-section" id="sec-1">
+    <div class="step-header">
+      <div class="step-number s1">1</div>
+      <div>
+        <div class="step-title">Entendendo o Problema</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">O que mudou em relação ao Desafio 1?</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:1.05rem;margin-bottom:20px">Agora você é dono de uma lanchonete! O cliente olha o cardápio, escolhe os itens e no final recebe a <strong style="color:var(--accent)">conta com o total</strong>.</p>
+
+      <div class="keyword-map stagger" id="kwMap">
+        <div class="keyword-chip">
+          <span class="emoji">📋</span>
+          <span class="kw-name">Cardápio</span>
+          <span class="kw-desc">4 itens com preços</span>
+        </div>
+        <div class="keyword-chip">
+          <span class="emoji">🔄</span>
+          <span class="kw-name">Pedir mais</span>
+          <span class="kw-desc">Loop enquanto quiser</span>
+        </div>
+        <div class="keyword-chip">
+          <span class="emoji">📦</span>
+          <span class="kw-name">Lista de pedidos</span>
+          <span class="kw-desc">Guarda cada item</span>
+        </div>
+        <div class="keyword-chip">
+          <span class="emoji">💰</span>
+          <span class="kw-name">Calcular total</span>
+          <span class="kw-desc"><span class="new-badge">Novo!</span></span>
+        </div>
+        <div class="keyword-chip">
+          <span class="emoji">🧾</span>
+          <span class="kw-name">Nota fiscal</span>
+          <span class="kw-desc">Resumo + total</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison with Desafio 1 -->
+    <div class="card">
+      <h3 style="margin-bottom:16px;color:var(--accent)">🔄 Comparando com o Desafio 1</h3>
+      <div class="comparison">
+        <div class="comparison-col">
+          <h4><span style="font-size:1.2rem">🎬</span> <span class="old">Desafio 1 — Votação</span></h4>
+          <ul>
+            <li>Menu com 3 filmes</li>
+            <li>Guardava votos</li>
+            <li>Contava com <code>.count()</code></li>
+            <li>Comparava quantidades</li>
+          </ul>
+        </div>
+        <div class="comparison-col" style="border-color:rgba(255,159,28,0.2)">
+          <h4><span style="font-size:1.2rem">🍔</span> <span class="new">Desafio 2 — Lanchonete</span></h4>
+          <ul>
+            <li>Menu com 4 itens + preços</li>
+            <li>Guarda pedidos</li>
+            <li>Função que <strong style="color:var(--accent)">retorna</strong> preço</li>
+            <li>Soma total com <strong style="color:var(--accent)">for</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tip" style="margin-top:16px">
+        <span class="tip-icon">🎯</span>
+        <div class="tip-content">As novidades principais são: <strong>funções com return</strong> (que devolvem um valor) e o loop <strong>for</strong> para percorrer a lista somando preços!</div>
+      </div>
+    </div>
+
+    <!-- Flowchart -->
+    <div class="card">
+      <h3 style="margin-bottom:20px;color:var(--accent)">🗺️ Mapa do Programa</h3>
+      <div class="flow-container stagger" id="flowchart">
+        <div class="flow-box start"><div class="label">Início</div>🍔 Criar lista de pedidos vazia</div>
+        <div class="flow-arrow"><span class="flow-label">loop começa ↩️</span></div>
+        <div class="flow-box process"><div class="label">Cardápio</div>📋 Mostrar menu com preços</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-box process"><div class="label">Entrada</div>⌨️ Pedir escolha do cliente</div>
+        <div class="flow-arrow"></div>
+        <div class="flow-box decision"><div class="label">Decisão</div>Digitou 0?</div>
+        <div class="flow-arrow">
+          <span class="flow-label">Não → item válido?</span>
+          <span class="flow-label right">Sim ↓</span>
+        </div>
+        <div class="flow-box action"><div class="label">Ação</div>📦 Adicionar item na lista</div>
+        <div class="flow-arrow"><span class="flow-label">volta pro menu 🔄</span></div>
+        <div class="flow-box end"><div class="label">Final</div>🧾 Percorrer lista, somar preços, mostrar total</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 2: Menu Function -->
+  <section class="step-section" id="sec-2">
+    <div class="step-header">
+      <div class="step-number s2">2</div>
+      <div>
+        <div class="step-title">O Cardápio</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">Função para exibir o menu — igual ao Desafio 1!</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="color:var(--text-dim);margin-bottom:16px">Primeiro, vamos criar nosso cardápio visualmente:</p>
+
+      <div class="menu-visual">
+        <div class="menu-visual-title">🍔 Lanchonete AI Burgers</div>
+        <div class="menu-item">
+          <div class="item-left"><span class="item-num n1">1</span><span class="item-name">X-Burger</span></div>
+          <span class="item-dots"></span>
+          <span class="item-price">R$15</span>
+        </div>
+        <div class="menu-item">
+          <div class="item-left"><span class="item-num n2">2</span><span class="item-name">X-Salada</span></div>
+          <span class="item-dots"></span>
+          <span class="item-price">R$18</span>
+        </div>
+        <div class="menu-item">
+          <div class="item-left"><span class="item-num n3">3</span><span class="item-name">Batata Frita</span></div>
+          <span class="item-dots"></span>
+          <span class="item-price">R$10</span>
+        </div>
+        <div class="menu-item">
+          <div class="item-left"><span class="item-num n4">4</span><span class="item-name">Refrigerante</span></div>
+          <span class="item-dots"></span>
+          <span class="item-price">R$7</span>
+        </div>
+        <div class="menu-item" style="opacity:0.5;margin-top:8px">
+          <div class="item-left"><span class="item-num" style="background:var(--text-dim)">0</span><span class="item-name">Finalizar Pedido</span></div>
+        </div>
+      </div>
+
+      <p style="color:var(--text-dim);margin:16px 0 8px">Agora em Python — uma função que imprime isso:</p>
+
+      <div class="code-block with-lines">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">lanchonete_ai.py — Passo 1</span>
+        </div>
+        <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7</div>
+        <pre>
+<span class="kw">def</span> <span class="fn">mostrar_menu</span>():
+    <span class="nb">print</span>(<span class="st">"🍔 Bem-vindo à Lanchonete AI Burgers!"</span>)
+    <span class="nb">print</span>(<span class="st">"1 - X-Burger ........ R$15"</span>)
+    <span class="nb">print</span>(<span class="st">"2 - X-Salada ........ R$18"</span>)
+    <span class="nb">print</span>(<span class="st">"3 - Batata Frita .... R$10"</span>)
+    <span class="nb">print</span>(<span class="st">"4 - Refrigerante .... R$7"</span>)
+    <span class="nb">print</span>(<span class="st">"0 - Finalizar Pedido"</span>)</pre>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">✅</span>
+        <div class="tip-content">Isso aqui você já sabe! Mesma estrutura do Desafio 1. A diferença é que agora temos <strong>4 opções</strong> em vez de 3, e cada uma tem um <strong>preço</strong>.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 3: Return Function — THE BIG NEW CONCEPT -->
+  <section class="step-section" id="sec-3">
+    <div class="step-header">
+      <div class="step-number s3">3</div>
+      <div>
+        <div class="step-title">Função com Return</div>
+        <div style="color:var(--text-dim);font-size:0.9rem"><span class="new-badge">Conceito Novo!</span> — Funções que devolvem valores</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="concept">
+        <div class="concept-title">🆕 O que é return?</div>
+        <p>No Desafio 1, nossa função apenas <strong style="color:var(--text)">imprimia</strong> (print). Agora precisamos de uma função que <strong style="color:var(--accent)">devolve</strong> um valor — o preço do item. Isso se faz com <code style="color:var(--accent3)">return</code>!</p>
+      </div>
+
+      <div class="analogy">
+        <div class="analogy-title">Função com print vs return</div>
+        <p style="color:var(--text-dim)">
+          <strong style="color:var(--text)">print</strong> = o garçom <em>grita</em> o preço no salão. Todo mundo ouve, mas ninguém "guarda".<br><br>
+          <strong style="color:var(--accent)">return</strong> = o garçom <em>entrega</em> o preço na sua mão. Você pode guardar, somar, fazer o que quiser com ele!
+        </p>
+      </div>
+
+      <div class="code-block with-lines">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">lanchonete_ai.py — Passo 2</span>
+        </div>
+        <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12</div>
+        <pre>
+<span class="kw">def</span> <span class="fn">preco_item</span>(opcao):   <span class="cm"># Recebe a opção</span>
+    <span class="kw">if</span> opcao == <span class="num">1</span>:
+        <span class="kw">return</span> <span class="num">15</span>          <span class="cm"># Devolve 15</span>
+    <span class="kw">elif</span> opcao == <span class="num">2</span>:
+        <span class="kw">return</span> <span class="num">18</span>          <span class="cm"># Devolve 18</span>
+    <span class="kw">elif</span> opcao == <span class="num">3</span>:
+        <span class="kw">return</span> <span class="num">10</span>          <span class="cm"># Devolve 10</span>
+    <span class="kw">elif</span> opcao == <span class="num">4</span>:
+        <span class="kw">return</span> <span class="num">7</span>           <span class="cm"># Devolve 7</span>
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="num">0</span>           <span class="cm"># Item inválido</span>
+</pre>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">🔑</span>
+        <div class="tip-content">
+          Repare: <code>preco_item(<strong>opcao</strong>)</code> recebe um <strong>parâmetro</strong> — o número que o cliente digitou. A função "olha" qual número é e <strong>devolve (return)</strong> o preço correspondente. É como uma <strong>tabela de consulta</strong>!
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">Exemplo de uso</span>
+        </div>
+        <pre>
+<span class="cm"># Como usar a função:</span>
+<span class="var">preco</span> = <span class="fn">preco_item</span>(<span class="num">1</span>)   <span class="cm"># preco agora vale 15</span>
+<span class="var">preco</span> = <span class="fn">preco_item</span>(<span class="num">3</span>)   <span class="cm"># preco agora vale 10</span>
+<span class="var">preco</span> = <span class="fn">preco_item</span>(<span class="num">99</span>)  <span class="cm"># preco agora vale 0 (inválido)</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 4: The Loop -->
+  <section class="step-section" id="sec-4">
+    <div class="step-header">
+      <div class="step-number s4">4</div>
+      <div>
+        <div class="step-title">O Loop de Pedidos</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">while True — o cliente pede até dizer "chega"</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="concept">
+        <div class="concept-title">🔄 Mesma lógica do Desafio 1!</div>
+        <p>O loop é praticamente <strong style="color:var(--text)">idêntico</strong> ao da votação. A diferença? Agora temos <strong>4 opções</strong> válidas e os nomes são de comida!</p>
+      </div>
+
+      <div class="code-block with-lines">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">lanchonete_ai.py — Passo 3</span>
+        </div>
+        <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13</div>
+        <pre>
+<span class="var">pedidos</span> = []  <span class="cm"># Lista vazia — a "comanda"</span>
+
+<span class="kw">while</span> <span class="bool">True</span>:
+    <span class="fn">mostrar_menu</span>()
+    <span class="var">opcao</span> = <span class="nb">int</span>(<span class="nb">input</span>(<span class="st">"Digite o número do item: "</span>))
+
+    <span class="kw">if</span> opcao == <span class="num">0</span>:
+        <span class="kw">break</span>  <span class="cm"># 🛑 Fecha a comanda!</span>
+    <span class="kw">elif</span> opcao == <span class="num">1</span> <span class="kw">or</span> opcao == <span class="num">2</span> <span class="kw">or</span> opcao == <span class="num">3</span> <span class="kw">or</span> opcao == <span class="num">4</span>:
+        pedidos.<span class="fn">append</span>(opcao)  <span class="cm"># 📦 Anota na comanda</span>
+        <span class="nb">print</span>(<span class="st">"✅ Item adicionado!"</span>)
+    <span class="kw">else</span>:
+        <span class="nb">print</span>(<span class="st">"⚠️ Opção inválida!"</span>)</pre>
+      </div>
+
+      <div class="analogy">
+        <div class="analogy-title">Analogia: O garçom anotando</div>
+        <p style="color:var(--text-dim)">O garçom (loop) fica ao lado da mesa <strong style="color:var(--text)">o tempo todo</strong>. A cada item que o cliente pede, ele <strong style="color:var(--accent)">anota na comanda</strong> (append). Quando o cliente diz "é só isso" (0), ele <strong style="color:var(--accent2)">vai calcular a conta</strong> (break).</p>
+      </div>
+    </div>
+
+    <!-- Interactive order builder -->
+    <div class="card">
+      <h3 style="margin-bottom:12px;color:var(--accent3)">🛒 Monte seu Pedido!</h3>
+      <p style="color:var(--text-dim);margin-bottom:16px;font-size:0.92rem">Clique nos itens para simular o <code>.append()</code> e veja a lista crescendo:</p>
+
+      <div class="order-buttons">
+        <button class="order-btn b1" onclick="addItem(1)">🍔 X-Burger <span style="opacity:0.6">R$15</span></button>
+        <button class="order-btn b2" onclick="addItem(2)">🥗 X-Salada <span style="opacity:0.6">R$18</span></button>
+        <button class="order-btn b3" onclick="addItem(3)">🍟 Batata <span style="opacity:0.6">R$10</span></button>
+        <button class="order-btn b4" onclick="addItem(4)">🥤 Refri <span style="opacity:0.6">R$7</span></button>
+        <button class="order-btn reset" onclick="resetOrder()">🔄 Limpar</button>
+      </div>
+
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.9rem;color:var(--text-dim);margin-bottom:4px">pedidos = </div>
+      <div class="order-list" id="orderList">
+        <span class="bracket">[</span>
+        <span class="bracket">]</span>
+      </div>
+
+      <!-- Live receipt -->
+      <div style="display:flex;justify-content:center;margin-top:20px">
+        <div class="receipt" id="receipt">
+          <div class="receipt-header">
+            <h4>🍔 AI Burgers</h4>
+            <p>Comanda do Cliente</p>
+          </div>
+          <div id="receiptItems">
+            <div style="text-align:center;color:#aaa;font-size:0.85rem;padding:16px 0">Nenhum item ainda...</div>
+          </div>
+          <div class="receipt-divider"></div>
+          <div class="receipt-total">
+            <span>TOTAL</span>
+            <span id="receiptTotal">R$ 0</span>
+          </div>
+          <div class="receipt-footer">Obrigado pela preferência! 😊</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 5: For loop + Total -->
+  <section class="step-section" id="sec-5">
+    <div class="step-header">
+      <div class="step-number s5">5</div>
+      <div>
+        <div class="step-title">Calculando o Total</div>
+        <div style="color:var(--text-dim);font-size:0.9rem"><span class="new-badge">Conceito Novo!</span> — O loop for e o acumulador</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="concept">
+        <div class="concept-title">🆕 O loop for — percorrendo a lista</div>
+        <p>No Desafio 1 usamos <code style="color:var(--accent5)">.count()</code> para contar votos. Agora precisamos <strong style="color:var(--text)">percorrer cada item</strong> da lista, descobrir o preço e <strong style="color:var(--accent)">somar tudo</strong>. Para isso usamos o <code style="color:var(--accent3)">for</code>!</p>
+      </div>
+
+      <div class="analogy">
+        <div class="analogy-title">for = Conferindo a comanda</div>
+        <p style="color:var(--text-dim)">Imagine que você olha a comanda <strong style="color:var(--text)">item por item</strong>: "X-Burger... R$15. Batata... R$10. Refri... R$7." A cada item, você <strong style="color:var(--accent)">soma na calculadora</strong>. No final, tem o total!</p>
+      </div>
+
+      <div class="code-block with-lines">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">lanchonete_ai.py — Passo 4</span>
+        </div>
+        <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7</div>
+        <pre>
+<span class="cm"># Calculando o total</span>
+<span class="var">total</span> = <span class="num">0</span>  <span class="cm"># Começa zerado</span>
+
+<span class="kw">for</span> <span class="var">p</span> <span class="kw">in</span> pedidos:          <span class="cm"># Para cada pedido na lista...</span>
+    total += <span class="fn">preco_item</span>(p)   <span class="cm"># ...soma o preço!</span>
+
+<span class="nb">print</span>(<span class="st">f"🧾 Total de {<span class="fn">len</span>(pedidos)} item(s) - Valor total: R${total}"</span>)</pre>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">💡</span>
+        <div class="tip-content">
+          <strong>total += preco_item(p)</strong> é o mesmo que <code>total = total + preco_item(p)</code>. O <code>+=</code> é um atalho para "soma e guarda". Chamamos isso de <strong>acumulador</strong>!
+        </div>
+      </div>
+
+      <!-- For loop step-by-step visualization -->
+      <h4 style="color:var(--accent);margin:24px 0 12px">🔍 Passo a passo do for</h4>
+      <p style="color:var(--text-dim);font-size:0.9rem;margin-bottom:16px">Se <code>pedidos = [1, 3, 4, 1]</code>, veja como o for percorre:</p>
+
+      <button class="btn-demo" onclick="animateFor()" id="forBtn" style="font-size:0.9rem;padding:10px 22px">▶️ Animar passo a passo</button>
+
+      <div class="for-viz" id="forViz">
+        <div class="for-viz-row" id="forRow0">
+          <span class="iter-badge" style="background:var(--text-dim)">0</span>
+          <span>total = <strong style="color:var(--accent)">0</strong></span>
+          <span class="calc" style="margin-left:auto">início</span>
+        </div>
+        <div class="for-viz-row" id="forRow1">
+          <span class="iter-badge" style="background:var(--burger)">1</span>
+          <span>p = <strong>1</strong> → preco_item(1) = <strong style="color:var(--accent)">15</strong></span>
+          <span class="arrow-icon">→</span>
+          <span class="result">total = 0 + 15 = <strong>15</strong></span>
+        </div>
+        <div class="for-viz-row" id="forRow2">
+          <span class="iter-badge" style="background:var(--fries)">2</span>
+          <span>p = <strong>3</strong> → preco_item(3) = <strong style="color:var(--accent)">10</strong></span>
+          <span class="arrow-icon">→</span>
+          <span class="result">total = 15 + 10 = <strong>25</strong></span>
+        </div>
+        <div class="for-viz-row" id="forRow3">
+          <span class="iter-badge" style="background:var(--drink)">3</span>
+          <span>p = <strong>4</strong> → preco_item(4) = <strong style="color:var(--accent)">7</strong></span>
+          <span class="arrow-icon">→</span>
+          <span class="result">total = 25 + 7 = <strong>32</strong></span>
+        </div>
+        <div class="for-viz-row" id="forRow4">
+          <span class="iter-badge" style="background:var(--burger)">4</span>
+          <span>p = <strong>1</strong> → preco_item(1) = <strong style="color:var(--accent)">15</strong></span>
+          <span class="arrow-icon">→</span>
+          <span class="result">total = 32 + 15 = <strong>47</strong></span>
+        </div>
+        <div class="for-viz-row" id="forRow5">
+          <span class="iter-badge" style="background:var(--accent3)">✓</span>
+          <span style="color:var(--accent3);font-weight:700">🧾 Total final: R$47</span>
+        </div>
+      </div>
+
+      <div class="warning" style="margin-top:16px">
+        <span class="warning-icon">📝</span>
+        <div style="color:var(--text-dim);font-size:0.92rem">
+          <strong style="color:var(--accent)">len(pedidos)</strong> retorna o tamanho da lista — quantos itens foram pedidos. É uma função built-in do Python!
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 6: Complete Code -->
+  <section class="step-section" id="sec-6">
+    <div class="step-header">
+      <div class="step-number s6">6</div>
+      <div>
+        <div class="step-title">Código Completo</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">Tudo junto — pronto para rodar!</div>
+      </div>
+    </div>
+
+    <div class="card complete-code">
+      <div class="pulse-badge" style="margin-bottom:16px">
+        <span class="dot"></span>
+        lanchonete_ai.py — versão final
+      </div>
+
+      <button class="copy-btn" onclick="copyCode()">📋 Copiar</button>
+
+      <div class="code-block with-lines">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">lanchonete_ai.py — Versão Completa ✅</span>
+        </div>
+        <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20<br>21<br>22<br>23<br>24<br>25<br>26<br>27<br>28<br>29<br>30<br>31<br>32<br>33<br>34<br>35<br>36<br>37<br>38<br>39</div>
+        <pre>
+<span class="cm"># 🍔 Sistema de Pedidos — Lanchonete AI Burgers</span>
+<span class="cm"># Desafio 2 — Programa AI</span>
+
+<span class="kw">def</span> <span class="fn">mostrar_menu</span>():
+    <span class="nb">print</span>(<span class="st">"🍔 Bem-vindo à Lanchonete AI Burgers!"</span>)
+    <span class="nb">print</span>(<span class="st">"1 - X-Burger ........ R$15"</span>)
+    <span class="nb">print</span>(<span class="st">"2 - X-Salada ........ R$18"</span>)
+    <span class="nb">print</span>(<span class="st">"3 - Batata Frita .... R$10"</span>)
+    <span class="nb">print</span>(<span class="st">"4 - Refrigerante .... R$7"</span>)
+    <span class="nb">print</span>(<span class="st">"0 - Finalizar Pedido"</span>)
+
+<span class="kw">def</span> <span class="fn">preco_item</span>(opcao):
+    <span class="kw">if</span> opcao == <span class="num">1</span>:
+        <span class="kw">return</span> <span class="num">15</span>
+    <span class="kw">elif</span> opcao == <span class="num">2</span>:
+        <span class="kw">return</span> <span class="num">18</span>
+    <span class="kw">elif</span> opcao == <span class="num">3</span>:
+        <span class="kw">return</span> <span class="num">10</span>
+    <span class="kw">elif</span> opcao == <span class="num">4</span>:
+        <span class="kw">return</span> <span class="num">7</span>
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="num">0</span>
+
+<span class="var">pedidos</span> = []
+
+<span class="kw">while</span> <span class="bool">True</span>:
+    <span class="fn">mostrar_menu</span>()
+    <span class="var">opcao</span> = <span class="nb">int</span>(<span class="nb">input</span>(<span class="st">"Digite o número do item: "</span>))
+
+    <span class="kw">if</span> opcao == <span class="num">0</span>:
+        <span class="kw">break</span>
+    <span class="kw">elif</span> opcao == <span class="num">1</span> <span class="kw">or</span> opcao == <span class="num">2</span> <span class="kw">or</span> opcao == <span class="num">3</span> <span class="kw">or</span> opcao == <span class="num">4</span>:
+        pedidos.<span class="fn">append</span>(opcao)
+        <span class="nb">print</span>(<span class="st">"✅ Item adicionado!"</span>)
+    <span class="kw">else</span>:
+        <span class="nb">print</span>(<span class="st">"⚠️ Opção inválida!"</span>)
+
+<span class="var">total</span> = <span class="num">0</span>
+<span class="kw">for</span> <span class="var">p</span> <span class="kw">in</span> pedidos:
+    total += <span class="fn">preco_item</span>(p)
+
+<span class="nb">print</span>(<span class="st">f"🧾 Total de {<span class="fn">len</span>(pedidos)} item(s) - Valor total: R${total}"</span>)</pre>
+      </div>
+
+      <!-- Concept recap toggler -->
+      <div class="toggler">
+        <div class="toggler-header" onclick="toggleSection(this)">
+          <span>📦 Mapa de conceitos usados</span>
+          <span class="toggler-arrow">▼</span>
+        </div>
+        <div class="toggler-body">
+          <div style="display:grid;gap:12px;margin-top:8px">
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">FUNÇÃO</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>mostrar_menu()</code> — imprime o cardápio</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent3);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">RETURN</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>preco_item(opcao)</code> — <strong style="color:var(--accent3)">devolve</strong> o preço do item</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent5);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">LISTA</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>pedidos = []</code> + <code>.append()</code> — armazena os pedidos</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent2);color:var(--text);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">WHILE</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>while True</code> + <code>break</code> — repete até finalizar</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent4);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">FOR</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>for p in pedidos</code> — percorre lista somando preços</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--text-dim);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">IF/ELIF</span>
+              <span style="color:var(--text-dim);font-size:0.9rem">Valida opção + decide preço de cada item</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 7: Demo -->
+  <section class="step-section" id="sec-7">
+    <div class="step-header">
+      <div class="step-number s3">▶</div>
+      <div>
+        <div class="step-title">Veja Funcionando!</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">Simulação animada do programa</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="color:var(--text-dim);margin-bottom:16px;font-size:0.95rem">Veja o programa rodando do início ao fim:</p>
+      <button class="btn-demo" onclick="runDemo()" id="demoBtn">▶️ Rodar Simulação</button>
+
+      <div class="demo-terminal">
+        <div class="term-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span>python lanchonete_ai.py</span>
+        </div>
+        <div class="demo-body" id="demoBody">
+          <div style="color:var(--text-dim);font-style:italic">Clique em "Rodar Simulação" para ver o programa em ação...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- Final -->
+  <section class="final-section step-section" id="sec-8">
+    <div class="trophy">🍔</div>
+    <h2>Pedido Entregue!</h2>
+    <p style="color:var(--text-dim);max-width:520px;margin:12px auto 24px;font-size:1.05rem">
+      Você aprendeu <strong style="color:var(--accent3)">return</strong>, o loop <strong style="color:var(--accent4)">for</strong> e o padrão <strong style="color:var(--accent)">acumulador</strong> — ferramentas que vai usar em praticamente todo programa!
+    </p>
+
+    <div class="card" style="text-align:left;max-width:500px;margin:0 auto">
+      <h3 style="margin-bottom:12px;color:var(--accent)">🚀 Desafios extras</h3>
+      <div style="color:var(--text-dim);font-size:0.92rem;display:flex;flex-direction:column;gap:10px">
+        <div>✦ Mostre o nome de cada item no resumo final (não só o número)</div>
+        <div>✦ Aplique 10% de desconto se o total passar de R$50</div>
+        <div>✦ Peça o nome do cliente e inclua no recibo</div>
+        <div>✦ Limite o pedido a no máximo 10 itens</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Feito com 🍔 para os alunos da <a href="#">Programa AI</a> — João Pessoa, PB
+  </footer>
+</div>
+
+<script>
+// Progress bar
+window.addEventListener('scroll',()=>{
+  const h=document.documentElement;
+  const pct=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;
+  document.getElementById('progressBar').style.width=pct+'%';
+});
+
+// Section reveal
+const sections=document.querySelectorAll('.step-section');
+const staggerEls=document.querySelectorAll('.stagger');
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')});
+},{threshold:0.15});
+sections.forEach(s=>observer.observe(s));
+staggerEls.forEach(s=>observer.observe(s));
+
+// Nav dots
+const navDots=document.querySelectorAll('.nav-dot');
+const sectionEls=document.querySelectorAll('[id^="sec-"]');
+const dotObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const idx=Array.from(sectionEls).indexOf(e.target);
+      navDots.forEach((d,i)=>d.classList.toggle('active',i===idx));
+    }
+  });
+},{threshold:0.3,rootMargin:'-20% 0px'});
+sectionEls.forEach(s=>dotObs.observe(s));
+
+function scrollToSection(i){sectionEls[i]?.scrollIntoView({behavior:'smooth',block:'start'})}
+
+// Interactive order builder
+const itemInfo={
+  1:{name:'X-Burger',emoji:'🍔',price:15,cls:'i1'},
+  2:{name:'X-Salada',emoji:'🥗',price:18,cls:'i2'},
+  3:{name:'Batata',emoji:'🍟',price:10,cls:'i3'},
+  4:{name:'Refri',emoji:'🥤',price:7,cls:'i4'},
+};
+let orderList=[];
+
+function addItem(n){
+  if(orderList.length>=10)return;
+  orderList.push(n);
+  renderOrder();
+}
+function resetOrder(){
+  orderList=[];
+  renderOrder();
+}
+function renderOrder(){
+  // List viz
+  const viz=document.getElementById('orderList');
+  let html='<span class="bracket">[</span>';
+  orderList.forEach((v,i)=>{
+    if(i>0)html+='<span class="comma">,</span> ';
+    const info=itemInfo[v];
+    html+=`<span class="item ${info.cls}" style="animation-delay:${i*0.04}s">${info.emoji} ${v}</span>`;
+  });
+  html+='<span class="bracket">]</span>';
+  viz.innerHTML=html;
+
+  // Receipt
+  const ri=document.getElementById('receiptItems');
+  const rt=document.getElementById('receiptTotal');
+  const receipt=document.getElementById('receipt');
+
+  if(orderList.length===0){
+    ri.innerHTML='<div style="text-align:center;color:#aaa;font-size:0.85rem;padding:16px 0">Nenhum item ainda...</div>';
+    rt.textContent='R$ 0';
+    receipt.classList.add('empty');
+    return;
+  }
+  receipt.classList.remove('empty');
+
+  let total=0;
+  let lines='';
+  // Group items
+  const counts={};
+  orderList.forEach(v=>{counts[v]=(counts[v]||0)+1});
+  for(const[k,c] of Object.entries(counts)){
+    const info=itemInfo[k];
+    const sub=info.price*c;
+    total+=sub;
+    lines+=`<div class="receipt-line"><span>${info.emoji} ${info.name} x${c}</span><span>R$${sub}</span></div>`;
+  }
+  ri.innerHTML=lines;
+  rt.textContent=`R$ ${total}`;
+}
+
+// For loop animation
+let forRunning=false;
+async function animateFor(){
+  if(forRunning)return;
+  forRunning=true;
+  const btn=document.getElementById('forBtn');
+  btn.style.opacity='0.5';btn.style.pointerEvents='none';
+
+  // Reset
+  for(let i=0;i<=5;i++){
+    document.getElementById('forRow'+i).classList.remove('active');
+    document.getElementById('forRow'+i).style.opacity='0.3';
+  }
+
+  for(let i=0;i<=5;i++){
+    await new Promise(r=>setTimeout(r,800));
+    document.getElementById('forRow'+i).style.opacity='1';
+    document.getElementById('forRow'+i).classList.add('active');
+    if(i>0){
+      document.getElementById('forRow'+(i-1)).classList.remove('active');
+    }
+  }
+
+  btn.style.opacity='1';btn.style.pointerEvents='auto';
+  btn.textContent='🔄 Animar de novo';
+  forRunning=false;
+}
+
+// Demo simulation
+let demoRunning=false;
+async function runDemo(){
+  if(demoRunning)return;
+  demoRunning=true;
+  const btn=document.getElementById('demoBtn');
+  btn.style.opacity='0.5';btn.style.pointerEvents='none';
+  const body=document.getElementById('demoBody');
+  body.innerHTML='';
+
+  const lines=[
+    {text:'🍔 Bem-vindo à Lanchonete AI Burgers!',cls:'output',delay:300},
+    {text:'1 - X-Burger ........ R$15',cls:'output',delay:150},
+    {text:'2 - X-Salada ........ R$18',cls:'output',delay:150},
+    {text:'3 - Batata Frita .... R$10',cls:'output',delay:150},
+    {text:'4 - Refrigerante .... R$7',cls:'output',delay:150},
+    {text:'0 - Finalizar Pedido',cls:'output',delay:150},
+    {text:'Digite o número do item: <span class="user-input">2</span>',cls:'prompt',delay:900},
+    {text:'✅ Item adicionado!',cls:'success',delay:400},
+    {text:'',cls:'',delay:200},
+    {text:'🍔 Bem-vindo à Lanchonete AI Burgers!',cls:'output',delay:250},
+    {text:'1 - X-Burger ........ R$15',cls:'output',delay:100},
+    {text:'2 - X-Salada ........ R$18',cls:'output',delay:100},
+    {text:'3 - Batata Frita .... R$10',cls:'output',delay:100},
+    {text:'4 - Refrigerante .... R$7',cls:'output',delay:100},
+    {text:'0 - Finalizar Pedido',cls:'output',delay:100},
+    {text:'Digite o número do item: <span class="user-input">1</span>',cls:'prompt',delay:900},
+    {text:'✅ Item adicionado!',cls:'success',delay:400},
+    {text:'',cls:'',delay:200},
+    {text:'🍔 Bem-vindo à Lanchonete AI Burgers!',cls:'output',delay:250},
+    {text:'1 - X-Burger ........ R$15',cls:'output',delay:100},
+    {text:'2 - X-Salada ........ R$18',cls:'output',delay:100},
+    {text:'3 - Batata Frita .... R$10',cls:'output',delay:100},
+    {text:'4 - Refrigerante .... R$7',cls:'output',delay:100},
+    {text:'0 - Finalizar Pedido',cls:'output',delay:100},
+    {text:'Digite o número do item: <span class="user-input">3</span>',cls:'prompt',delay:900},
+    {text:'✅ Item adicionado!',cls:'success',delay:400},
+    {text:'',cls:'',delay:200},
+    {text:'🍔 Bem-vindo à Lanchonete AI Burgers!',cls:'output',delay:250},
+    {text:'1 - X-Burger ........ R$15',cls:'output',delay:100},
+    {text:'2 - X-Salada ........ R$18',cls:'output',delay:100},
+    {text:'3 - Batata Frita .... R$10',cls:'output',delay:100},
+    {text:'4 - Refrigerante .... R$7',cls:'output',delay:100},
+    {text:'0 - Finalizar Pedido',cls:'output',delay:100},
+    {text:'Digite o número do item: <span class="user-input">0</span>',cls:'prompt',delay:1000},
+    {text:'',cls:'',delay:500},
+    {text:'🧾 Total de 3 item(s) - Valor total: R$43',cls:'result',delay:0},
+  ];
+
+  for(const line of lines){
+    await new Promise(r=>setTimeout(r,line.delay));
+    const div=document.createElement('div');
+    div.className='demo-line';
+    div.innerHTML=`<span class="${line.cls}">${line.text}</span>`;
+    body.appendChild(div);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>div.classList.add('show')));
+    body.scrollTop=body.scrollHeight;
+  }
+
+  btn.style.opacity='1';btn.style.pointerEvents='auto';
+  btn.textContent='🔄 Rodar de Novo';
+  demoRunning=false;
+}
+
+// Toggler
+function toggleSection(header){
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+// Copy code
+function copyCode(){
+  const code=`# 🍔 Sistema de Pedidos — Lanchonete AI Burgers
+# Desafio 2 — Programa AI
+
+def mostrar_menu():
+    print("🍔 Bem-vindo à Lanchonete AI Burgers!")
+    print("1 - X-Burger ........ R$15")
+    print("2 - X-Salada ........ R$18")
+    print("3 - Batata Frita .... R$10")
+    print("4 - Refrigerante .... R$7")
+    print("0 - Finalizar Pedido")
+
+def preco_item(opcao):
+    if opcao == 1:
+        return 15
+    elif opcao == 2:
+        return 18
+    elif opcao == 3:
+        return 10
+    elif opcao == 4:
+        return 7
+    else:
+        return 0
+
+pedidos = []
+
+while True:
+    mostrar_menu()
+    opcao = int(input("Digite o número do item: "))
+
+    if opcao == 0:
+        break
+    elif opcao == 1 or opcao == 2 or opcao == 3 or opcao == 4:
+        pedidos.append(opcao)
+        print("✅ Item adicionado!")
+    else:
+        print("⚠️ Opção inválida!")
+
+total = 0
+for p in pedidos:
+    total += preco_item(p)
+
+print(f"🧾 Total de {len(pedidos)} item(s) - Valor total: R${total}")`;
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn=document.querySelector('.copy-btn');
+    btn.textContent='✅ Copiado!';
+    setTimeout(()=>btn.textContent='📋 Copiar',2000);
+  });
+}
+</script>
+</body>
+</html>
